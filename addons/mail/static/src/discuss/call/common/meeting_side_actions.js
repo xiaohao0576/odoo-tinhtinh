@@ -1,0 +1,69 @@
+import { useSubEnv } from "@web/owl2/utils";
+import { ActionList } from "@mail/core/common/action_list";
+
+import { Component } from "@odoo/owl";
+
+import { useService } from "@web/core/utils/hooks";
+import { useCallActions } from "./call_actions";
+import { ACTION_TAGS } from "@mail/core/common/action";
+
+/** @typedef {"chat"|"invite"} MeetingPanel */
+
+/**
+ * @typedef {Object} Props
+ * @property {import("@mail/core/common/thread_actions").UseThreadActions} threadActions
+ * @extends {Component<Props, Env>}
+ */
+export class MeetingSideActions extends Component {
+    static template = "mail.MeetingSideActions";
+    static props = ["threadActions", "isSmall?"];
+    static components = { ActionList };
+
+    setup() {
+        this.store = useService("mail.store");
+        this.callActions = useCallActions(this.callActionsParams);
+        useSubEnv({ inMeetingSideActions: true });
+    }
+
+    get callActionsParams() {
+        return { channel: () => this.store.rtc.channel };
+    }
+
+    computeActions() {
+        const threadActions = this.props.threadActions;
+        if (this.store.rtc.channel.default_display_mode === "video_full_screen") {
+            this.actions = threadActions.actions.filter((action) =>
+                ["member-list", "meeting-chat"].includes(action.id)
+            );
+            return;
+        }
+        const quickThreadActionIds = this.props.isSmall ? [] : ["invite-people", "meeting-chat"];
+        const { quick, other, group } = threadActions.partition;
+        const partitionedActions = {
+            quick: quick.filter((action) => !quickThreadActionIds.includes(action.id)),
+            other: other.filter((action) => !quickThreadActionIds.includes(action.id)),
+            group: group
+                .map((group) => group.filter((action) => !quickThreadActionIds.includes(action.id)))
+                .filter((g) => g.length > 0),
+        };
+        const actions = threadActions.actions.filter((action) =>
+            quickThreadActionIds.includes(action.id)
+        );
+        actions.push(
+            threadActions.more(this.callActionsParams, {
+                actions: [
+                    partitionedActions.quick,
+                    partitionedActions.other,
+                    ...partitionedActions.group,
+                ],
+            })
+        );
+        this.actions = actions;
+    }
+
+    get layoutActions() {
+        return this.callActions.actions.filter((action) =>
+            action.tags.includes(ACTION_TAGS.CALL_LAYOUT)
+        );
+    }
+}
