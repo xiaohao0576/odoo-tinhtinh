@@ -10,6 +10,7 @@ class PosSelfKiosk(http.Controller):
     def start_self_ordering(self, config_id=None, access_token=None, table_identifier=None, partner_token=None, subpath=None):
         pos_config, _, config_access_token = self._verify_entry_access(config_id, access_token, table_identifier)
         partner = self._get_partner_from_token(pos_config, partner_token)
+        preset = self._get_locked_preset_from_partner(pos_config, partner)
         serialized_partner = self._serialize_partner_for_session(partner)
         return request.render(
                 'pos_self_order.index',
@@ -22,6 +23,7 @@ class PosSelfKiosk(http.Controller):
                             'config_id': pos_config.id,
                             'self_ordering_mode': pos_config.self_ordering_mode,
                             'locked_partner_id': partner.id,
+                            'locked_preset_id': preset.id,
                             'locked_partner': serialized_partner,
                         },
                         "base_url": request.env['pos.session'].get_base_url(),
@@ -29,6 +31,17 @@ class PosSelfKiosk(http.Controller):
                     }
                 }
             )
+
+    def _get_locked_preset_from_partner(self, pos_config, partner):
+        preset = partner.self_order_preset_id
+        if not preset:
+            raise werkzeug.exceptions.NotFound()
+
+        allowed_presets = pos_config.available_preset_ids
+        if preset not in allowed_presets:
+            raise werkzeug.exceptions.NotFound()
+
+        return preset
 
     def _serialize_partner_for_session(self, partner):
         return {

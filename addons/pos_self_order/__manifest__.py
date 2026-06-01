@@ -16,6 +16,7 @@
         "views/pos_restaurant_views.xml",
         "views/product_views.xml",
         "views/pos_preset_view.xml",
+        "views/res_partner_view.xml",
         "data/init_access.xml",
         "views/res_config_settings_views.xml",
         "views/point_of_sale_dashboard.xml",

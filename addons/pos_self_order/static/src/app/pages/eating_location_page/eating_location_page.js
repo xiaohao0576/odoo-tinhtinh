@@ -16,6 +16,12 @@ export class EatingLocationPage extends Component {
         this.scrollShadow = useScrollShadow(this.scrollContainerRef);
         this.ui = useService("ui");
         this.SIZES = SIZES;
+
+        const lockedPreset = this.selfOrder.getLockedPreset();
+        if (lockedPreset) {
+            this.selfOrder.currentOrder.setPreset(lockedPreset);
+            this.router.navigate(history.state.redirectPage || "product_list");
+        }
     }
 
     onClickBack() {

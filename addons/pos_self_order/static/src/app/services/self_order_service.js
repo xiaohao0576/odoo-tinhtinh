@@ -559,21 +559,31 @@ export class SelfOrder extends Reactive {
         }
     }
 
+    getLockedPreset() {
+        const lockedPresetId = parseInt(session.data.locked_preset_id);
+        return Number.isFinite(lockedPresetId) ? this.models["pos.preset"].get(lockedPresetId) : null;
+    }
+
     createNewOrder() {
         const autoSelectedPresets =
             this.models["pos.preset"].length === 1 && this.config.use_presets;
+        const lockedPreset = this.getLockedPreset();
         const lockedPartnerId = parseInt(session.data.locked_partner_id);
         const lockedPartner = Number.isFinite(lockedPartnerId)
             ? this.models["res.partner"].get(lockedPartnerId)
             : null;
 
-        const fiscalPosition = autoSelectedPresets
-            ? this.config.default_preset_id?.fiscal_position_id
-            : this.config.default_fiscal_position_id;
+        const fiscalPosition = lockedPreset
+            ? lockedPreset.fiscal_position_id
+            : autoSelectedPresets
+              ? this.config.default_preset_id?.fiscal_position_id
+              : this.config.default_fiscal_position_id;
 
-        const pricelist = autoSelectedPresets
-            ? this.config.default_preset_id?.pricelist_id
-            : this.config.pricelist_id;
+        const pricelist = lockedPreset
+            ? lockedPreset.pricelist_id
+            : autoSelectedPresets
+              ? this.config.default_preset_id?.pricelist_id
+              : this.config.pricelist_id;
 
         return this.models["pos.order"].create({
             company_id: this.company,
@@ -582,7 +592,7 @@ export class SelfOrder extends Reactive {
             config_id: this.config,
             fiscal_position_id: fiscalPosition,
             pricelist_id: pricelist,
-            preset_id: autoSelectedPresets ? this.config.default_preset_id : false,
+            preset_id: lockedPreset || (autoSelectedPresets ? this.config.default_preset_id : false),
             partner_id: lockedPartner || false,
         });
     }
@@ -802,12 +812,16 @@ export class SelfOrder extends Reactive {
     }
 
     async sendDraftOrderToServer() {
+        const lockedPreset = this.getLockedPreset();
         const lockedPartnerId = parseInt(session.data.locked_partner_id);
         const lockedPartner = Number.isFinite(lockedPartnerId)
             ? this.models["res.partner"].get(lockedPartnerId)
             : null;
         if (lockedPartner && this.currentOrder.partner_id?.id !== lockedPartner.id) {
             this.currentOrder.partner_id = lockedPartner;
+        }
+        if (lockedPreset && this.currentOrder.preset_id?.id !== lockedPreset.id) {
+            this.currentOrder.setPreset(lockedPreset);
         }
 
         if (
@@ -1069,6 +1083,9 @@ export class SelfOrder extends Reactive {
     }
 
     hasPresets() {
+        if (this.getLockedPreset()) {
+            return false;
+        }
         return this.config.use_presets && this.models["pos.preset"].length > 1;
     }
     getTime(date) {
