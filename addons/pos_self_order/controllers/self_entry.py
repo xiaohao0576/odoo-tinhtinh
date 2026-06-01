@@ -8,29 +8,40 @@ from odoo.http import request
 class PosSelfKiosk(http.Controller):
     @http.route(["/pos-self/<config_id>", "/pos-self/<config_id>/<path:subpath>"], auth="public", website=True, sitemap=True)
     def start_self_ordering(self, config_id=None, access_token=None, table_identifier=None, partner_token=None, subpath=None):
-        pos_config, _, config_access_token = self._verify_entry_access(config_id, access_token, table_identifier)
-        partner = self._get_partner_from_token(pos_config, partner_token)
-        preset = self._get_locked_preset_from_partner(pos_config, partner)
-        serialized_partner = self._serialize_partner_for_session(partner)
-        return request.render(
-                'pos_self_order.index',
-                {
-                    'access_token': config_access_token,
-                    'session_info': {
-                        **request.env["ir.http"].get_frontend_session_info(),
-                        'currencies': request.env["res.currency"].get_all_currencies(),
-                        'data': {
-                            'config_id': pos_config.id,
-                            'self_ordering_mode': pos_config.self_ordering_mode,
-                            'locked_partner_id': partner.id,
-                            'locked_preset_id': preset.id,
-                            'locked_partner': serialized_partner,
-                        },
-                        "base_url": request.env['pos.session'].get_base_url(),
-                        "db": request.env.cr.dbname,
+        try:
+            pos_config, _, config_access_token = self._verify_entry_access(config_id, access_token, table_identifier)
+            partner = self._get_partner_from_token(pos_config, partner_token)
+            preset = self._get_locked_preset_from_partner(pos_config, partner)
+            serialized_partner = self._serialize_partner_for_session(partner)
+            return request.render(
+                    'pos_self_order.index',
+                    {
+                        'access_token': config_access_token,
+                        'session_info': {
+                            **request.env["ir.http"].get_frontend_session_info(),
+                            'currencies': request.env["res.currency"].get_all_currencies(),
+                            'data': {
+                                'config_id': pos_config.id,
+                                'self_ordering_mode': pos_config.self_ordering_mode,
+                                'locked_partner_id': partner.id,
+                                'locked_preset_id': preset.id,
+                                'locked_partner': serialized_partner,
+                            },
+                            "base_url": request.env['pos.session'].get_base_url(),
+                            "db": request.env.cr.dbname,
+                        }
                     }
-                }
-            )
+                )
+        except werkzeug.exceptions.NotFound:
+            return self._render_friendly_not_found()
+
+    def _render_friendly_not_found(self):
+        lang = request.lang or request.cookies.get("frontend_lang") or "en_US"
+        response = request.render("pos_self_order.friendly_not_found", {
+            "is_zh": str(lang).startswith("zh"),
+        })
+        response.status_code = 404
+        return response
 
     def _get_locked_preset_from_partner(self, pos_config, partner):
         preset = partner.self_order_preset_id

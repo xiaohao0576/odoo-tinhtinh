@@ -9,6 +9,7 @@
         "data/mail_template_data.xml",
         "data/preset_data.xml",
         "views/pos_self_order.index.xml",
+        "views/pos_self_order_error_pages.xml",
         "views/qr_code.xml",
         "views/pos_category_views.xml",
         "views/pos_config_view.xml",
