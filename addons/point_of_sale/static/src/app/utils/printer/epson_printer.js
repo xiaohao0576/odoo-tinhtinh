@@ -132,6 +132,13 @@ export class EpsonPrinter extends BasePrinter {
         return `${protocol}//${this.printer_ip}/cgi-bin/epos/service.cgi?devid=local_printer&timeout=${this.timeout}`;
     }
 
+    setPrinterIp(printerIp) {
+        this.printer_ip = printerIp;
+        if (this.use_lna) {
+            this.lnaTargetAddressSpace = getLNATargetAddressSpace(this.address);
+        }
+    }
+
     get STYLE_MAPPING() {
         const base = super.STYLE_MAPPING;
         return {

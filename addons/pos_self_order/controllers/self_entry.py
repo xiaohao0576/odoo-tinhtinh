@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import werkzeug
 
-from odoo import http
+from odoo import fields, http
 from odoo.http import request
 
 
@@ -10,9 +10,13 @@ class PosSelfKiosk(http.Controller):
     def start_self_ordering(self, config_id=None, access_token=None, table_identifier=None, partner_token=None, subpath=None):
         try:
             pos_config, _, config_access_token = self._verify_entry_access(config_id, access_token, table_identifier)
-            partner = self._get_partner_from_token(pos_config, partner_token)
-            preset = self._get_locked_preset_from_partner(pos_config, partner)
+            partner_token_record = self._get_partner_token_record(pos_config, partner_token)
+            partner = partner_token_record.partner_id
+            preset = partner_token_record.preset_id
+            printer = partner_token_record.printer_id
+            self._mark_partner_token_used(partner_token_record)
             serialized_partner = self._serialize_partner_for_session(partner)
+            serialized_printer = self._serialize_printer_for_session(printer)
             return request.render(
                     'pos_self_order.index',
                     {
@@ -25,7 +29,9 @@ class PosSelfKiosk(http.Controller):
                                 'self_ordering_mode': pos_config.self_ordering_mode,
                                 'locked_partner_id': partner.id,
                                 'locked_preset_id': preset.id,
+                                'locked_printer_id': printer.id,
                                 'locked_partner': serialized_partner,
+                                'locked_printer': serialized_printer,
                             },
                             "base_url": request.env['pos.session'].get_base_url(),
                             "db": request.env.cr.dbname,
@@ -43,17 +49,6 @@ class PosSelfKiosk(http.Controller):
         response.status_code = 404
         return response
 
-    def _get_locked_preset_from_partner(self, pos_config, partner):
-        preset = partner.self_order_preset_id
-        if not preset:
-            raise werkzeug.exceptions.NotFound()
-
-        allowed_presets = pos_config.available_preset_ids
-        if preset not in allowed_presets:
-            raise werkzeug.exceptions.NotFound()
-
-        return preset
-
     def _serialize_partner_for_session(self, partner):
         return {
             'id': partner.id,
@@ -69,20 +64,52 @@ class PosSelfKiosk(http.Controller):
             'property_product_pricelist': partner.property_product_pricelist.id if partner.property_product_pricelist else False,
         }
 
-    def _get_partner_from_token(self, pos_config, partner_token):
+    def _serialize_printer_for_session(self, printer):
+        return {
+            'id': printer.id,
+            'name': printer.name,
+            'product_categories_ids': printer.product_categories_ids.ids,
+            'printer_type': printer.printer_type,
+            'use_type': printer.use_type,
+            'use_lna': printer.use_lna,
+            'printer_ip': printer.printer_ip,
+            'paper_size': printer.paper_size,
+            'timeout': printer.timeout,
+        }
+
+    def _get_partner_token_record(self, pos_config, partner_token):
         if not partner_token:
             raise werkzeug.exceptions.NotFound()
 
-        try:
-            partner_id = int(partner_token)
-        except (TypeError, ValueError):
+        token_record = request.env['pos.partner.token'].sudo().search([
+            ('token_hash', '=', partner_token),
+            ('active', '=', True),
+            ('config_id', '=', pos_config.id),
+        ], limit=1)
+
+        if not token_record:
             raise werkzeug.exceptions.NotFound()
 
-        partner = pos_config.env['res.partner'].sudo().browse(partner_id)
-        if not partner.exists():
+        if token_record.expires_at and token_record.expires_at <= fields.Datetime.now():
             raise werkzeug.exceptions.NotFound()
 
-        return partner
+        if token_record.preset_id not in pos_config.available_preset_ids:
+            raise werkzeug.exceptions.NotFound()
+
+        return token_record
+
+    def _mark_partner_token_used(self, token_record):
+        token_record.sudo().write({
+            'last_used_at': fields.Datetime.now(),
+            'last_access_ip': self._get_client_ip(),
+            'use_count': token_record.use_count + 1,
+        })
+
+    def _get_client_ip(self):
+        forwarded_for = request.httprequest.headers.get('X-Forwarded-For')
+        if forwarded_for:
+            return forwarded_for.split(',')[0].strip()
+        return request.httprequest.remote_addr or ''
 
     @http.route("/pos-self/data/<config_id>", type='jsonrpc', auth='public', website=True)
     def get_self_ordering_data(self, config_id=None, access_token=None, table_identifier=None):

@@ -85,7 +85,7 @@ export class SelfOrder extends Reactive {
             formatCurrency: (amount) => this.formatMonetary(amount),
         };
 
-        this.initData();
+        await this.initData();
         if (this.config.self_ordering_mode === "kiosk") {
             await this.initKioskData();
         } else {
@@ -564,6 +564,13 @@ export class SelfOrder extends Reactive {
         return Number.isFinite(lockedPresetId) ? this.models["pos.preset"].get(lockedPresetId) : null;
     }
 
+    getLockedReceiptPrinter() {
+        const lockedPrinterId = parseInt(session.data.locked_printer_id);
+        return Number.isFinite(lockedPrinterId)
+            ? this.models["pos.printer"].get(lockedPrinterId)
+            : null;
+    }
+
     createNewOrder() {
         const autoSelectedPresets =
             this.models["pos.preset"].length === 1 && this.config.use_presets;
@@ -659,11 +666,29 @@ export class SelfOrder extends Reactive {
         }
     }
 
-    initData() {
+    async initData() {
         this.snoozedProductTracker.setSnoozes(this.config.pos_snooze_ids);
         this.initProducts();
         this._initLanguages();
         this.initHardware();
+        await this.applyLockedReceiptPrinter();
+    }
+
+    async applyLockedReceiptPrinter() {
+        const lockedPrinter = this.getLockedReceiptPrinter();
+        if (!lockedPrinter) {
+            return;
+        }
+
+        this.config.default_receipt_printer_id = lockedPrinter;
+
+        if (!lockedPrinter._instance) {
+            lockedPrinter._instance = await this.ticketPrinter.createPrinterInstance(lockedPrinter);
+        }
+
+        if (lockedPrinter._instance?.setPrinterIp && lockedPrinter.printer_ip) {
+            lockedPrinter._instance.setPrinterIp(lockedPrinter.printer_ip);
+        }
     }
 
     _initLanguages() {

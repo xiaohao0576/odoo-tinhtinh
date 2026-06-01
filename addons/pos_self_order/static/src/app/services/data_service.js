@@ -9,17 +9,26 @@ export const unpatchSelf = patch(PosData.prototype, {
         const configId = session.data.config_id;
         const localData = await this.getCachedServerDataFromIndexedDB();
         const localPartners = localData?.["res.partner"] || [];
+        const localPrinters = localData?.["pos.printer"] || [];
         const serverPartners = [];
+        const serverPrinters = [];
         if (session.data.locked_partner) {
             serverPartners.push(session.data.locked_partner);
+        }
+        if (session.data.locked_printer) {
+            serverPrinters.push(session.data.locked_printer);
         }
         await this.fetchReceiptTemplate();
         const data = await rpc(`/pos-self/data/${parseInt(configId)}`, {
             access_token: odoo.access_token,
         });
         const mergedPartners = [...(data["res.partner"] || []), ...localPartners, ...serverPartners];
+        const mergedPrinters = [...(data["pos.printer"] || []), ...localPrinters, ...serverPrinters];
         data["res.partner"] = Array.from(
             new Map(mergedPartners.filter((partner) => partner?.id).map((partner) => [partner.id, partner])).values()
+        );
+        data["pos.printer"] = Array.from(
+            new Map(mergedPrinters.filter((printer) => printer?.id).map((printer) => [printer.id, printer])).values()
         );
         return data;
     },
