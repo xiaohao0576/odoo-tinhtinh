@@ -8,12 +8,19 @@ export const unpatchSelf = patch(PosData.prototype, {
     async loadInitialData() {
         const configId = session.data.config_id;
         const localData = await this.getCachedServerDataFromIndexedDB();
-        const partners = localData?.["res.partner"] || [];
+        const localPartners = localData?.["res.partner"] || [];
+        const serverPartners = [];
+        if (session.data.locked_partner) {
+            serverPartners.push(session.data.locked_partner);
+        }
         await this.fetchReceiptTemplate();
         const data = await rpc(`/pos-self/data/${parseInt(configId)}`, {
             access_token: odoo.access_token,
         });
-        data["res.partner"] = partners;
+        const mergedPartners = [...(data["res.partner"] || []), ...localPartners, ...serverPartners];
+        data["res.partner"] = Array.from(
+            new Map(mergedPartners.filter((partner) => partner?.id).map((partner) => [partner.id, partner])).values()
+        );
         return data;
     },
     async fetchReceiptTemplate() {

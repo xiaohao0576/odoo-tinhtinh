@@ -7,8 +7,10 @@ from odoo.http import request
 
 class PosSelfKiosk(http.Controller):
     @http.route(["/pos-self/<config_id>", "/pos-self/<config_id>/<path:subpath>"], auth="public", website=True, sitemap=True)
-    def start_self_ordering(self, config_id=None, access_token=None, table_identifier=None, subpath=None):
+    def start_self_ordering(self, config_id=None, access_token=None, table_identifier=None, partner_token=None, subpath=None):
         pos_config, _, config_access_token = self._verify_entry_access(config_id, access_token, table_identifier)
+        partner = self._get_partner_from_token(pos_config, partner_token)
+        serialized_partner = self._serialize_partner_for_session(partner)
         return request.render(
                 'pos_self_order.index',
                 {
@@ -19,12 +21,44 @@ class PosSelfKiosk(http.Controller):
                         'data': {
                             'config_id': pos_config.id,
                             'self_ordering_mode': pos_config.self_ordering_mode,
+                            'locked_partner_id': partner.id,
+                            'locked_partner': serialized_partner,
                         },
                         "base_url": request.env['pos.session'].get_base_url(),
                         "db": request.env.cr.dbname,
                     }
                 }
             )
+
+    def _serialize_partner_for_session(self, partner):
+        return {
+            'id': partner.id,
+            'name': partner.name,
+            'email': partner.email,
+            'phone': partner.phone,
+            'street': partner.street,
+            'city': partner.city,
+            'zip': partner.zip,
+            'country_id': partner.country_id.id if partner.country_id else False,
+            'state_id': partner.state_id.id if partner.state_id else False,
+            'write_date': str(partner.write_date) if partner.write_date else False,
+            'property_product_pricelist': partner.property_product_pricelist.id if partner.property_product_pricelist else False,
+        }
+
+    def _get_partner_from_token(self, pos_config, partner_token):
+        if not partner_token:
+            raise werkzeug.exceptions.NotFound()
+
+        try:
+            partner_id = int(partner_token)
+        except (TypeError, ValueError):
+            raise werkzeug.exceptions.NotFound()
+
+        partner = pos_config.env['res.partner'].sudo().browse(partner_id)
+        if not partner.exists():
+            raise werkzeug.exceptions.NotFound()
+
+        return partner
 
     @http.route("/pos-self/data/<config_id>", type='jsonrpc', auth='public', website=True)
     def get_self_ordering_data(self, config_id=None, access_token=None, table_identifier=None):

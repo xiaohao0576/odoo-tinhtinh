@@ -6,6 +6,7 @@ import { markup } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { registry } from "@web/core/registry";
 import { cookie } from "@web/core/browser/cookie";
+import { session } from "@web/session";
 import { formatDateTime, serializeDateTime } from "@web/core/l10n/dates";
 import { TimeoutPopup } from "@pos_self_order/app/components/timeout_popup/timeout_popup";
 import { NetworkConnectionLostPopup } from "@pos_self_order/app/components/network_connectionLost_popup/network_connectionLost_popup";
@@ -561,6 +562,10 @@ export class SelfOrder extends Reactive {
     createNewOrder() {
         const autoSelectedPresets =
             this.models["pos.preset"].length === 1 && this.config.use_presets;
+        const lockedPartnerId = parseInt(session.data.locked_partner_id);
+        const lockedPartner = Number.isFinite(lockedPartnerId)
+            ? this.models["res.partner"].get(lockedPartnerId)
+            : null;
 
         const fiscalPosition = autoSelectedPresets
             ? this.config.default_preset_id?.fiscal_position_id
@@ -578,6 +583,7 @@ export class SelfOrder extends Reactive {
             fiscal_position_id: fiscalPosition,
             pricelist_id: pricelist,
             preset_id: autoSelectedPresets ? this.config.default_preset_id : false,
+            partner_id: lockedPartner || false,
         });
     }
 
@@ -796,6 +802,14 @@ export class SelfOrder extends Reactive {
     }
 
     async sendDraftOrderToServer() {
+        const lockedPartnerId = parseInt(session.data.locked_partner_id);
+        const lockedPartner = Number.isFinite(lockedPartnerId)
+            ? this.models["res.partner"].get(lockedPartnerId)
+            : null;
+        if (lockedPartner && this.currentOrder.partner_id?.id !== lockedPartner.id) {
+            this.currentOrder.partner_id = lockedPartner;
+        }
+
         if (
             Object.keys(this.currentOrder.changes).length === 0 ||
             this.currentOrder.lines.length === 0
