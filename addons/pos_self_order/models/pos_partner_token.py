@@ -21,6 +21,11 @@ class PosPartnerToken(models.Model):
     )
     partner_id = fields.Many2one("res.partner", required=True, tracking=True)
     config_id = fields.Many2one("pos.config", required=True, tracking=True)
+    available_language_ids = fields.Many2many(
+        "res.lang",
+        related="config_id.self_ordering_available_language_ids",
+        readonly=True,
+    )
     preset_id = fields.Many2one("pos.preset", required=True, tracking=True)
     pricelist_id = fields.Many2one(
         "product.pricelist",
@@ -29,6 +34,11 @@ class PosPartnerToken(models.Model):
         store=True,
     )
     printer_id = fields.Many2one("pos.printer", required=True, tracking=True)
+    default_language_id = fields.Many2one(
+        "res.lang",
+        string="Default Language",
+        tracking=True,
+    )
     telegram_username = fields.Char(
         string="Telegram Username",
         tracking=True,
@@ -64,6 +74,14 @@ class PosPartnerToken(models.Model):
             if config_id and not vals.get("printer_id"):
                 config = self.env["pos.config"].browse(config_id)
                 vals["printer_id"] = config.default_receipt_printer_id.id
+
+            if not vals.get("default_language_id") and vals.get("partner_id"):
+                partner = self.env["res.partner"].browse(vals["partner_id"])
+                if partner.lang:
+                    partner_lang = self.env["res.lang"].search([("code", "=", partner.lang)], limit=1)
+                    if partner_lang:
+                        if not config_id or partner_lang in self.env["pos.config"].browse(config_id).self_ordering_available_language_ids:
+                            vals["default_language_id"] = partner_lang.id
         return super().create(vals_list)
 
     @api.constrains("preset_id", "config_id")
@@ -74,10 +92,32 @@ class PosPartnerToken(models.Model):
                     _("The selected preset is not available in the selected Point of Sale.")
                 )
 
-    @api.onchange("config_id")
+    @api.constrains("default_language_id", "config_id")
+    def _check_language_allowed_in_config(self):
+        for record in self:
+            if record.default_language_id and record.default_language_id not in record.config_id.self_ordering_available_language_ids:
+                raise ValidationError(
+                    _("The selected language is not available in the selected Point of Sale.")
+                )
+
+    @api.onchange("config_id", "partner_id")
     def _onchange_config_id(self):
         if self.config_id and not self.printer_id:
             self.printer_id = self.config_id.default_receipt_printer_id
+
+        if self.partner_id and self.partner_id.lang:
+            partner_lang = self.env["res.lang"].search([("code", "=", self.partner_id.lang)], limit=1)
+            if partner_lang and (
+                not self.config_id
+                or partner_lang in self.config_id.self_ordering_available_language_ids
+            ):
+                self.default_language_id = partner_lang
+            elif (
+                self.config_id
+                and self.default_language_id
+                and self.default_language_id not in self.config_id.self_ordering_available_language_ids
+            ):
+                self.default_language_id = False
 
     def action_regenerate_token_hash(self):
         for record in self:

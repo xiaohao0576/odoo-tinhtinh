@@ -14,6 +14,7 @@ class PosSelfKiosk(http.Controller):
             partner = partner_token_record.partner_id
             preset = partner_token_record.preset_id
             printer = partner_token_record.printer_id
+            language = partner_token_record.default_language_id
             self._mark_partner_token_used(partner_token_record)
             serialized_partner = self._serialize_partner_for_session(partner)
             serialized_printer = self._serialize_printer_for_session(printer)
@@ -30,6 +31,8 @@ class PosSelfKiosk(http.Controller):
                                 'locked_partner_id': partner.id,
                                 'locked_preset_id': preset.id,
                                 'locked_printer_id': printer.id,
+                                'locked_language_id': language.id if language else False,
+                                'locked_language_code': language.code if language else False,
                                 'locked_partner': serialized_partner,
                                 'locked_printer': serialized_printer,
                             },

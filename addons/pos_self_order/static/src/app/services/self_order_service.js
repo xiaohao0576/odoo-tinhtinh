@@ -693,7 +693,13 @@ export class SelfOrder extends Reactive {
 
     _initLanguages() {
         const languages = this.config.self_ordering_available_language_ids;
-        this.currentLanguage = languages.find((l) => l.code === cookie.get("frontend_lang"));
+        const lockedLanguageCode = session.data.locked_language_code;
+        if (lockedLanguageCode) {
+            this.currentLanguage = languages.find((l) => l.code === lockedLanguageCode);
+        }
+        if (!this.currentLanguage) {
+            this.currentLanguage = languages.find((l) => l.code === cookie.get("frontend_lang"));
+        }
         if (languages && !this.currentLanguage) {
             this.currentLanguage = this.config.self_ordering_default_language_id;
         }

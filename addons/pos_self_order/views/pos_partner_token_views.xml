@@ -7,6 +7,7 @@
             <list string="POS Partner Tokens">
                 <field name="name"/>
                 <field name="partner_id"/>
+                <field name="default_language_id"/>
                 <field name="preset_id"/>
                 <field name="pricelist_id"/>
                 <field name="expires_at"/>
@@ -35,6 +36,7 @@
                             <field name="token_hash" readonly="1"/>
                             <field name="partner_id"/>
                             <field name="config_id"/>
+                            <field name="default_language_id" domain="[('id', 'in', available_language_ids)]"/>
                             <field name="preset_id"/>
                             <field name="pricelist_id" readonly="1"/>
                             <field name="printer_id"/>
