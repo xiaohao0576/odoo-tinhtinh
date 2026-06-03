@@ -336,6 +336,43 @@ export class CartPage extends Component {
         }
     }
 
+    setLineQuantity(line, nextQty) {
+        const targetQty = Math.max(1, parseInt(nextQty, 10) || 1);
+        const currentQty = this.getLineChangeQty(line);
+
+        if (targetQty === currentQty) {
+            return;
+        }
+
+        const increase = targetQty > currentQty;
+        const iterations = Math.abs(targetQty - currentQty);
+
+        for (let index = 0; index < iterations; index++) {
+            this.changeQuantity(line, increase);
+        }
+    }
+
+    selectQuantityInput(ev) {
+        ev.target.select();
+    }
+
+    onQuantityInput(line, ev) {
+        const digitsOnly = ev.target.value.replace(/\D+/g, "");
+
+        if (!digitsOnly) {
+            return;
+        }
+
+        this.setLineQuantity(line, digitsOnly);
+    }
+
+    onQuantityBlur(line, ev) {
+        const digitsOnly = ev.target.value.replace(/\D+/g, "");
+        const nextQty = digitsOnly ? parseInt(digitsOnly, 10) : this.getLineChangeQty(line);
+        this.setLineQuantity(line, nextQty);
+        ev.target.value = this.getLineChangeQty(line);
+    }
+
     getCustomValue(line, attr) {
         return (
             attr.is_custom &&

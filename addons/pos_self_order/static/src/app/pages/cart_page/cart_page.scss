@@ -1,5 +1,81 @@
 .o_self_cart_page{
 
+  .cart_qty_group {
+    display: inline-flex;
+    align-items: stretch;
+    overflow: hidden;
+    border-radius: 999px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+    background: var(--bg-secondary);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  }
+
+  .cart_qty_btn {
+    min-width: 2.75rem;
+    min-height: 100%;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: inherit;
+    box-shadow: none !important;
+  }
+
+  .cart_qty_btn:focus,
+  .cart_qty_btn:active,
+  .cart_qty_btn:hover {
+    background: rgba(0, 0, 0, 0.04) !important;
+    color: inherit;
+  }
+
+  .cart_qty_btn_minus {
+    border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .cart_qty_btn_plus {
+    border-left: 1px solid rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .cart_qty_input {
+    width: 5.25rem;
+    min-height: 100%;
+    line-height: 1.2;
+    appearance: textfield;
+    -moz-appearance: textfield;
+    -webkit-touch-callout: none;
+    background-clip: padding-box;
+    background: var(--bg-secondary) !important;
+    color: var(--body-color, inherit) !important;
+    box-shadow: none;
+    outline: none;
+    border-left: 0;
+    border-right: 0;
+    border-top: 0;
+    border-bottom: 0;
+    border-radius: 0 !important;
+    caret-color: currentColor;
+  }
+
+  .cart_qty_input:focus {
+    background: var(--bg-secondary) !important;
+    color: var(--body-color, inherit) !important;
+    box-shadow: none;
+  }
+
+  .cart_qty_input::selection {
+    background: rgba(var(--primary-rgb), 0.18);
+    color: var(--body-color, inherit);
+  }
+
+  .cart_qty_input::-webkit-text-fill-color {
+    -webkit-text-fill-color: currentColor;
+  }
+
+  .cart_qty_input::-webkit-outer-spin-button,
+  .cart_qty_input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
    .product_img{
      max-width: 120px;
    }
@@ -15,6 +91,17 @@
 }
 
   @include media-breakpoint-down(sm) {
+
+    .cart_qty_input {
+      width: 5.75rem;
+      padding-left: 0.75rem !important;
+      padding-right: 0.75rem !important;
+      font-size: 1.375rem !important;
+    }
+
+    .cart_qty_btn {
+      min-width: 3rem;
+    }
 
     .product_img {
       max-width: 90px;

@@ -44,21 +44,39 @@
                                     </div>
                                     <div class="d-flex w-100 justify-content-between align-items-center mt-3 mt-md-4">
                                         <!-- Quantity -->
-                                        <div t-if="display_change_quantity and !isDeliveryLine(line)" class="btn-group" >
+                                        <div t-if="display_change_quantity and !isDeliveryLine(line)" class="btn-group cart_qty_group" >
                                             <button
                                                     t-if="this.canDeleteLine(line) &amp;&amp; this.getLineChangeQty(line) > 1"
                                                     type="button"
                                                     t-on-click="() => this.changeQuantity(line, false)"
-                                                    class="btn btn-secondary py-1 px-2"><i class="oi oi-minus fa-fw"/></button>
+                                                class="btn btn-secondary py-1 px-2 cart_qty_btn cart_qty_btn_minus"><i class="oi oi-minus fa-fw"/></button>
                                             <button
                                                     t-else=""
                                                     type="button"
                                                     t-on-click="(e) => this.removeLine(line,e)"
-                                                    class="btn btn-secondary py-1 px-2"><i class="fa fa-trash-o fa-fw"/></button>
-                                            <div class="o-so-tabular-nums fs-4 d-flex align-items-center m-0 px-4 py-2 text-bg-secondary fw-bolder" t-out="this.getLineChangeQty(line)"/>
+                                                class="btn btn-secondary py-1 px-2 cart_qty_btn cart_qty_btn_minus"><i class="fa fa-trash-o fa-fw"/></button>
+                                                <input
+                                                type="number"
+                                                min="1"
+                                                step="1"
+                                                inputmode="numeric"
+                                                pattern="[0-9]*"
+                                                enterkeyhint="done"
+                                                autocomplete="off"
+                                                autocorrect="off"
+                                                autocapitalize="off"
+                                                spellcheck="false"
+                                                translate="no"
+                                                class="cart_qty_input o-so-tabular-nums fs-4 m-0 px-2 py-2 text-bg-secondary fw-bolder text-center border-0 rounded-0"
+                                                t-att-value="this.getLineChangeQty(line)"
+                                                t-on-focus="selectQuantityInput"
+                                                t-on-input="(ev) => this.onQuantityInput(line, ev)"
+                                                t-on-blur="(ev) => this.onQuantityBlur(line, ev)"
+                                                t-on-contextmenu.prevent="() => {}"
+                                                />
                                             <button type="button"
                                                     t-on-click="() => this.changeQuantity(line, true)"
-                                                    class="btn btn-secondary py-1 px-2"
+                                                    class="btn btn-secondary py-1 px-2 cart_qty_btn cart_qty_btn_plus"
                                                     ><i class="oi oi-plus fa-fw"/></button>
                                         </div>
                                         <div t-else=""/>
